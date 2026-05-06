@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>頭痛があるとき・頭痛がないときチェックシート</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;background:#f6f6f6;margin:0;padding:16px;color:#333}
+  .container{max-width:1100px;margin:0 auto;background:#fff;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-radius:8px}
+  .top-form{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;font-size:13px;border:1px solid #ddd;border-radius:6px;padding:10px}
+  .top-form label{display:flex;align-items:center;gap:4px}
+  .top-form input{border:none;border-bottom:1px solid #999;padding:2px 4px;font-size:13px}
+  h1{text-align:center;font-size:22px;margin:8px 0 16px}
+  h1 .o{color:#e8842a}
+  h1 .g{color:#4f9d6b}
+  .summary{background:#fff8f0;border:1px solid #f0d9b5;border-radius:8px;padding:12px;margin-bottom:24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center}
+  .summary .lead{background:#f5b275;color:#fff;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:bold;line-height:1.3;text-align:center}
+  .summary .item{display:flex;flex-direction:column;align-items:center;font-size:12px;gap:4px}
+  .summary .item .lbl{text-align:center}
+  .summary .item .row{display:flex;align-items:center;gap:4px}
+  .summary .item input{width:54px;text-align:center;border:1px solid #ccc;border-radius:50%;padding:6px 0;font-size:14px}
+  .columns{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  @media (max-width:900px){.columns{grid-template-columns:1fr}}
+  .panel{padding-top:8px}
+  .panel-o{border-top:4px solid #e8842a}
+  .panel-g{border-top:4px solid #4f9d6b}
+  .panel h2{text-align:center;font-size:18px;margin:8px 0 2px}
+  .panel-o h2{color:#e8842a}
+  .panel-g h2{color:#4f9d6b}
+  .panel .sub{text-align:center;font-size:12px;margin:0 0 10px;color:#666}
+  .lead-text{font-size:13px;margin:6px 0 14px;line-height:1.5}
+  .question{margin-bottom:14px}
+  .qhead{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;font-size:13px;line-height:1.4}
+  .qnum{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;color:#fff;font-size:12px;font-weight:bold;flex-shrink:0;margin-top:1px}
+  .panel-o .qnum{background:#e8842a}
+  .panel-g .qnum{background:#4f9d6b}
+  .qtext .note{font-size:11px;color:#666;display:block;margin-top:2px}
+  .options{display:grid;gap:4px}
+  .options.c5{grid-template-columns:repeat(5,1fr)}
+  .options.c6{grid-template-columns:repeat(6,1fr)}
+  .options button{background:#fff5e8;border:1px solid transparent;padding:10px 4px;font-size:11px;cursor:pointer;border-radius:4px;line-height:1.25;color:#333;transition:all .15s;font-family:inherit}
+  .panel-g .options button{background:#eaf5ee}
+  .options button:hover{border-color:#999}
+  .options button.on{background:#e8842a;color:#fff;font-weight:bold}
+  .panel-g .options button.on{background:#4f9d6b;color:#fff;font-weight:bold}
+  .totals{margin-top:14px;padding:10px 12px;background:#fafafa;border-radius:6px;font-size:12px}
+  .totals .row{display:flex;justify-content:space-between;padding:2px 0}
+  .grand{margin-top:10px;padding:12px;border-radius:6px;text-align:center;font-size:14px;font-weight:bold}
+  .panel-o .grand{background:#fff0db}
+  .panel-g .grand{background:#e2f1e7}
+  .grand .num{font-size:30px;margin:0 4px}
+  .verdict{margin-top:12px;padding:14px;border-radius:6px;border-left:6px solid;font-size:13px;line-height:1.7}
+  .verdict.severe{border-color:#c0392b;background:#fdecea}
+  .verdict.high{border-color:#d35400;background:#fff1e3}
+  .verdict.moderate{border-color:#d4ac0d;background:#fef8e0}
+  .verdict.mild{border-color:#2e8b57;background:#eaf5ee}
+  .verdict.empty{border-color:#bbb;background:#f5f5f5;color:#888;font-size:12px}
+  .verdict h3{margin:0 0 6px;font-size:15px}
+  .verdict .advice{color:#b00;font-weight:bold}
+  .free{margin-top:30px}
+  .free label{display:block;font-weight:bold;margin-bottom:6px;font-size:14px}
+  .free textarea{width:100%;min-height:100px;border:1px solid #ccc;border-radius:6px;padding:10px;font-size:13px;font-family:inherit;resize:vertical}
+  .actions{margin-top:18px;text-align:center}
+  .actions button{padding:10px 22px;margin:0 6px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-family:inherit}
+  .actions .reset{background:#eee;color:#333}
+  .actions .print{background:#4f9d6b;color:#fff}
+  .footer-note{margin-top:18px;font-size:10px;color:#888;text-align:center;line-height:1.5}
+  @media print{
+    body{background:#fff;padding:0}
+    .container{box-shadow:none;padding:0;max-width:none}
+    .actions{display:none}
+    .options button{border:1px solid #999 !important}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="top-form">
+    <label>年 <input type="text" size="4"></label>
+    <label>月 <input type="text" size="2"></label>
+    <label>日 <input type="text" size="2"></label>
+    <label>氏名 <input type="text" size="14"></label>
+    <label>担当医 <input type="text" size="10"></label>
+  </div>
+
+  <h1>頭痛が<span class="o">あるとき</span>・頭痛が<span class="g">ないとき</span>チェックシート</h1>
+
+  <div class="summary">
+    <div class="lead">過去4週間の<br>ご自身の状態を<br>記入してください</div>
+    <div class="item"><div class="lbl">頭痛があった日数</div><div class="row">約<input type="number" min="0" max="28">日</div></div>
+    <div class="item"><div class="lbl">痛み止めを服用した日数</div><div class="row">約<input type="number" min="0" max="28">日</div></div>
+    <div class="item"><div class="lbl">頭痛はないが、<br>スッキリしなかった日数</div><div class="row">約<input type="number" min="0" max="28">日</div></div>
+    <div class="item"><div class="lbl">スッキリしていた日数</div><div class="row">約<input type="number" min="0" max="28">日</div></div>
+  </div>
+
+  <div class="columns">
+    <section class="panel panel-o" id="hit6">
+      <h2>頭痛があるとき</h2>
+      <p class="sub">（日本語版HIT-6™）</p>
+      <p class="lead-text">①〜⑥の質問で、もっともあてはまるものに〇をつけてください。</p>
+      <div id="hit6-q"></div>
+      <div class="totals" id="hit6-totals"></div>
+      <div class="grand" id="hit6-grand">総合得点 <span class="num">0</span>点</div>
+      <div class="verdict empty" id="hit6-verdict">※ 全 6 問に回答すると判定が表示されます（最低36点〜最高78点）</div>
+    </section>
+
+    <section class="panel panel-g" id="mibs4">
+      <h2>頭痛がないとき</h2>
+      <p class="sub">（日本語版MIBS-4）</p>
+      <p class="lead-text">過去4週間における、頭痛発作のない日の頭痛の影響について、①〜④の質問で、もっともあてはまるものに〇をつけてください。</p>
+      <div id="mibs4-q"></div>
+      <div class="totals" id="mibs4-totals"></div>
+      <div class="grand" id="mibs4-grand">総合得点 <span class="num">0</span>点</div>
+      <div class="verdict empty" id="mibs4-verdict">※ 全 4 問に回答すると判定が表示されます（0〜12点）</div>
+    </section>
+  </div>
+
+  <div class="free">
+    <label>今困っていることや、治療に対する希望、その他気になることがあればご記入ください。</label>
+    <textarea></textarea>
+  </div>
+
+  <div class="actions">
+    <button class="reset" type="button" onclick="resetAll()">リセット</button>
+    <button class="print" type="button" onclick="window.print()">印刷</button>
+  </div>
+
+  <div class="footer-note">
+    HIT-6™: 坂井 文彦ほか. 臨床医薬 2004; 20: 1045-1054を一部改変<br>
+    MIBS-4: Buse DC, et al.: Mayo Clin Proc. 2009; 84(5): 422-435を一部改変
+  </div>
+</div>
+
+<script>
+const HIT6_Q = [
+  {q:"頭が痛いとき、痛みがひどいことがどれくらいありますか?", opts:["全くない","ほとんどない","時々ある","しばしばある","いつもそうだ"]},
+  {q:"頭痛のせいで、日常生活に支障が出ることがありますか?", note:"(例えば、家事、仕事、学校生活、人付き合いなど)", opts:["全くない","ほとんどない","時々ある","しばしばある","いつもそうだ"]},
+  {q:"頭が痛いとき、横になりたくなることがありますか?", opts:["全くない","ほとんどない","時々ある","しばしばある","いつもそうだ"]},
+  {q:"この4週間に、頭痛のせいで疲れてしまって、仕事やいつもの活動ができないことがありましたか?", opts:["全くなかった","ほとんどなかった","時々あった","しばしばあった","いつもそうだった"]},
+  {q:"この4週間に、頭痛のせいで、うんざりしたりいらいらしたりしたことがありましたか?", opts:["全くなかった","ほとんどなかった","時々あった","しばしばあった","いつもそうだった"]},
+  {q:"この4週間に、頭痛のせいで、仕事や日常生活の場で集中できないことがありましたか?", opts:["全くなかった","ほとんどなかった","時々あった","しばしばあった","いつもそうだった"]}
+];
+const HIT6_PT = [6,8,10,11,13];
+
+const MIBS4_Q = [
+  {q:"頭痛がない時に、頭痛は仕事又は学校に影響を与えた。"},
+  {q:"頭痛が起こるかもしれないために、私は人付き合いやレジャー活動を計画することに不安を感じた。"},
+  {q:"頭痛が起こっていない時に、頭痛は私の生活に影響を与えた。"},
+  {q:"頭痛が起こっていない時に、私は頭痛のために無力感を覚えた。"}
+];
+const MIBS4_OPTS = ["わからない／該当なし","全くなかった","ほとんどなかった","時々","多くの時間","ほぼいつも／いつも"];
+const MIBS4_PT = [0,0,1,2,3,3];
+
+const hit6 = new Array(HIT6_Q.length).fill(null);
+const mibs4 = new Array(MIBS4_Q.length).fill(null);
+
+function render(){
+  document.getElementById('hit6-q').innerHTML = HIT6_Q.map((q,i)=>`<div class="question"><div class="qhead"><span class="qnum">${i+1}</span><div class="qtext">${q.q}${q.note?`<span class="note">${q.note}</span>`:""}</div></div><div class="options c5">${q.opts.map((o,j)=>`<button type="button" data-q="${i}" data-j="${j}" onclick="sel('hit6',${i},${j})">${o}</button>`).join("")}</div></div>`).join("");
+  document.getElementById('mibs4-q').innerHTML = MIBS4_Q.map((q,i)=>`<div class="question"><div class="qhead"><span class="qnum">${i+1}</span><div class="qtext">${q.q}</div></div><div class="options c6">${MIBS4_OPTS.map((o,j)=>`<button type="button" data-q="${i}" data-j="${j}" onclick="sel('mibs4',${i},${j})">${o}</button>`).join("")}</div></div>`).join("");
+}
+
+function sel(which,i,j){
+  const arr = which==='hit6'?hit6:mibs4;
+  arr[i] = j;
+  document.querySelectorAll(`#${which} .options button[data-q="${i}"]`).forEach(b=>{ b.classList.toggle('on', parseInt(b.dataset.j)===j); });
+  if(which==='hit6') updateHit6(); else updateMibs4();
+}
+
+function updateHit6(){
+  const cnt=[0,0,0,0,0]; hit6.forEach(s=>{if(s!==null)cnt[s]++;});
+  const cs = cnt.map((c,i)=>c*HIT6_PT[i]); const total = cs.reduce((a,b)=>a+b,0);
+  document.getElementById('hit6-totals').innerHTML = cs.map((s,i)=>`<div class="row"><span>${i+1}列目（〇の数 ${cnt[i]} ×${HIT6_PT[i]}点）</span><span><b>${s}</b> 点</span></div>`).join("");
+  document.getElementById('hit6-grand').innerHTML = `総合得点 <span class="num">${total}</span>点`;
+  const v = document.getElementById('hit6-verdict');
+  if(hit6.some(s=>s===null)){ v.className='verdict empty'; v.textContent='※ 全 6 問に回答すると判定が表示されます（最低36点〜最高78点）'; return; }
+  let c,h,b;
+  if(total>=60){c='severe';h='重度の支障があります。';b='頭痛に悩まされる他の人々よりも重症であり、頭痛のせいで、家庭や仕事、学校生活、人付き合いなどの大切な活動の多くが妨げられています。<br><span class="advice">どうすればこのつらい状態から抜け出せるか、早めに主治医に相談しましょう。</span>';}
+  else if(total>=56){c='high';h='かなりの支障があります。';b='重度の頭痛のせいで、家庭や仕事、学校生活、人付き合いなどの大切な活動が妨げられています。<br><span class="advice">このような状態を我慢せず、これからの治療について早めに主治医に相談しましょう。</span>';}
+  else if(total>=50){c='moderate';h='ある程度の支障があります。';b='頭痛のせいで、家庭や仕事、学校生活、人付き合いなどの大切な活動が妨げられる状況は正常とはいえません。<br><span class="advice">自分に合った治療を受けられているかどうか、改めて主治医に相談しましょう。</span>';}
+  else{c='mild';h='日常生活に影響を与えるような頭痛はないようです。';b='今後も定期的にチェックをして、頭痛が日常生活にどのような影響を与えるかを知っておくことをお勧めします。';}
+  v.className=`verdict ${c}`; v.innerHTML=`<h3>HIT-6判定（${total}点）: ${h}</h3><div>${b}</div>`;
+}
+
+function updateMibs4(){
+  const cnt=[0,0,0,0,0,0]; mibs4.forEach(s=>{if(s!==null)cnt[s]++;});
+  const cs = cnt.map((c,i)=>c*MIBS4_PT[i]); const total = cs.reduce((a,b)=>a+b,0);
+  document.getElementById('mibs4-totals').innerHTML = cs.map((s,i)=>`<div class="row"><span>${i+1}列目（〇の数 ${cnt[i]} ×${MIBS4_PT[i]}点）</span><span><b>${s}</b> 点</span></div>`).join("");
+  document.getElementById('mibs4-grand').innerHTML = `総合得点 <span class="num">${total}</span>点`;
+  const v = document.getElementById('mibs4-verdict');
+  if(mibs4.some(s=>s===null)){ v.className='verdict empty'; v.textContent='※ 全 4 問に回答すると判定が表示されます（0〜12点）'; return; }
+  let c,h,b;
+  if(total>=5){c='severe';h='「重度」と判定されます。';b='頭痛が起こっていない時でも、頭痛によって仕事や学校、人付き合いなどの大切な活動が妨げられたり、無力感を覚えたりすることがあるようです。<br><span class="advice">対処法や急性期治療の見直しに加え、予防治療が推奨されます。</span>';}
+  else if(total>=3){c='high';h='「中等度」と判定されます。';b='頭痛が起こっていない時でも、頭痛が日常生活になんらかの影響を与えているようです。<br><span class="advice">対処法や急性期治療の見直しに加え、予防治療を検討しましょう。</span>';}
+  else if(total>=1){c='moderate';h='「軽度」と判定されます。';b='頭痛が起こっていない時に、頭痛が日常生活に影響を与えていることはあまりないようですが、<span class="advice">対処法や急性期治療薬を見直すことができます。</span>';}
+  else{c='mild';h='「支障なし」と判定されます。';b='今後も定期的にチェックをして、頭痛が日常生活にどのような影響を与えるかを知っておくことをお勧めします。';}
+  v.className=`verdict ${c}`; v.innerHTML=`<h3>MIBS-4判定（${total}点）: ${h}</h3><div>${b}</div>`;
+}
+
+function resetAll(){
+  hit6.fill(null); mibs4.fill(null);
+  document.querySelectorAll('.options button').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(el=>el.value='');
+  updateHit6(); updateMibs4();
+}
+
+render(); updateHit6(); updateMibs4();
+</script>
+</body>
+</html>
