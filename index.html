@@ -65,12 +65,26 @@
   .actions button{padding:10px 22px;margin:0 6px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-family:inherit}
   .actions .reset{background:#eee;color:#333}
   .actions .print{background:#4f9d6b;color:#fff}
+  .actions .qr{background:#e8842a;color:#fff}
   .footer-note{margin-top:18px;font-size:10px;color:#888;text-align:center;line-height:1.5}
+  .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000}
+  .modal[hidden]{display:none}
+  .modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+  .modal-card{position:relative;background:#fff;padding:22px 24px;border-radius:10px;max-width:90vw;max-height:90vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);text-align:center;width:360px}
+  .modal-card h3{margin:0 0 6px;color:#4f9d6b;font-size:17px}
+  .modal-card .qr-note{font-size:12px;color:#666;margin:0 0 14px;line-height:1.5}
+  .modal-card #qr-area{margin:0 auto 12px;display:inline-block;min-height:280px}
+  .modal-card #qr-area img{display:block;margin:0 auto;width:280px;height:280px;image-rendering:pixelated}
+  .modal-card #qr-text{background:#f8f8f8;border:1px solid #eee;border-radius:6px;padding:10px;font-size:11px;text-align:left;white-space:pre-wrap;word-break:break-all;max-height:140px;overflow:auto;font-family:inherit;line-height:1.55;color:#444;margin:0}
+  .modal-card .close-btn{margin-top:14px;padding:8px 26px;background:#888;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-size:13px}
+  .modal-card .close-btn:hover{background:#666}
+  .qr-error{color:#c0392b;font-size:12px;padding:20px}
   @media print{
     body{background:#fff;padding:0}
     .container{box-shadow:none;padding:0;max-width:none}
     .actions{display:none}
     .options button{border:1px solid #999 !important}
+    .modal{display:none !important}
   }
 </style>
 </head>
@@ -124,6 +138,7 @@
   <div class="actions">
     <button class="reset" type="button" onclick="resetAll()">リセット</button>
     <button class="print" type="button" onclick="window.print()">印刷</button>
+    <button class="qr" type="button" onclick="openQr()">QRコード</button>
   </div>
 
   <div class="footer-note">
@@ -132,6 +147,18 @@
   </div>
 </div>
 
+<div class="modal" id="qr-modal" hidden>
+  <div class="modal-bg" onclick="closeQr()"></div>
+  <div class="modal-card">
+    <h3>QRコード</h3>
+    <p class="qr-note">スマートフォンのカメラで読み取ると、入力内容と判定結果をテキストで取り出せます。</p>
+    <div id="qr-area"></div>
+    <pre id="qr-text"></pre>
+    <button class="close-btn" type="button" onclick="closeQr()">閉じる</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 const HIT6_Q = [
   {q:"頭が痛いとき、痛みがひどいことがどれくらいありますか?", opts:["全くない","ほとんどない","時々ある","しばしばある","いつもそうだ"]},
@@ -165,6 +192,27 @@ function sel(which,i,j){
   arr[i] = j;
   document.querySelectorAll(`#${which} .options button[data-q="${i}"]`).forEach(b=>{ b.classList.toggle('on', parseInt(b.dataset.j)===j); });
   if(which==='hit6') updateHit6(); else updateMibs4();
+}
+
+function hit6Total(){
+  const cnt=[0,0,0,0,0]; hit6.forEach(s=>{if(s!==null)cnt[s]++;});
+  return cnt.reduce((a,c,i)=>a+c*HIT6_PT[i],0);
+}
+function mibs4Total(){
+  const cnt=[0,0,0,0,0,0]; mibs4.forEach(s=>{if(s!==null)cnt[s]++;});
+  return cnt.reduce((a,c,i)=>a+c*MIBS4_PT[i],0);
+}
+function hit6Verdict(t){
+  if(t>=60) return '重度';
+  if(t>=56) return 'かなり';
+  if(t>=50) return 'ある程度';
+  return '影響なし';
+}
+function mibs4Verdict(t){
+  if(t>=5) return '重度';
+  if(t>=3) return '中等度';
+  if(t>=1) return '軽度';
+  return '支障なし';
 }
 
 function updateHit6(){
@@ -203,6 +251,80 @@ function resetAll(){
   document.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(el=>el.value='');
   updateHit6(); updateMibs4();
 }
+
+// QRコード関連
+function buildQrText(){
+  const tf = document.querySelectorAll('.top-form input');
+  const sm = document.querySelectorAll('.summary input');
+  const free = (document.querySelector('.free textarea').value||'').trim();
+  const hDone = !hit6.some(s=>s===null);
+  const mDone = !mibs4.some(s=>s===null);
+  const hT = hit6Total();
+  const mT = mibs4Total();
+  const lines = [
+    '頭痛チェックシート',
+    `日付: ${tf[0].value||'-'}/${tf[1].value||'-'}/${tf[2].value||'-'}`,
+    `氏名: ${tf[3].value||'-'}`,
+    `担当医: ${tf[4].value||'-'}`,
+    '【過去4週間】',
+    `頭痛があった日: ${sm[0].value||'-'}日`,
+    `痛み止め服用日: ${sm[1].value||'-'}日`,
+    `スッキリせず: ${sm[2].value||'-'}日`,
+    `スッキリ: ${sm[3].value||'-'}日`,
+    `【HIT-6】 ${hDone?hT+'点 '+hit6Verdict(hT):'未完'}`,
+    `回答: ${hit6.map(s=>s===null?'-':(s+1)).join(',')}`,
+    `【MIBS-4】 ${mDone?mT+'点 '+mibs4Verdict(mT):'未完'}`,
+    `回答: ${mibs4.map(s=>s===null?'-':(s+1)).join(',')}`
+  ];
+  if(free) lines.push(`【備考】 ${free}`);
+  return lines.join('\n');
+}
+
+function openQr(){
+  const text = buildQrText();
+  document.getElementById('qr-text').textContent = text;
+  const area = document.getElementById('qr-area');
+  if(typeof qrcode === 'undefined'){
+    area.innerHTML = '<p class="qr-error">QRコードライブラリの読み込みに失敗しました。インターネット接続を確認してください。</p>';
+    document.getElementById('qr-modal').hidden = false;
+    return;
+  }
+  // UTF-8対応（日本語）
+  try{
+    if(qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs['UTF-8']){
+      qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+    } else {
+      qrcode.stringToBytes = function(s){
+        const u = unescape(encodeURIComponent(s));
+        const a = []; for(let i=0;i<u.length;i++) a.push(u.charCodeAt(i)); return a;
+      };
+    }
+  }catch(e){}
+  let qr = null;
+  for(let t=4;t<=40;t++){
+    try{
+      const x = qrcode(t, 'M');
+      x.addData(text);
+      x.make();
+      qr = x; break;
+    }catch(e){ qr = null; }
+  }
+  if(!qr){
+    area.innerHTML = '<p class="qr-error">入力情報が多すぎてQRコードを生成できませんでした。備考を短くしてもう一度お試しください。</p>';
+  } else {
+    area.innerHTML = qr.createImgTag(5, 8);
+  }
+  document.getElementById('qr-modal').hidden = false;
+}
+
+function closeQr(){
+  document.getElementById('qr-modal').hidden = true;
+}
+
+// Escキーで閉じる
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape'){ closeQr(); }
+});
 
 render(); updateHit6(); updateMibs4();
 </script>
