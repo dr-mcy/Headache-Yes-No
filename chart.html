@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>頭痛チェック グラフビューア</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;background:#f0f2f5;color:#333;font-size:14px}
+.container{max-width:960px;margin:0 auto;padding:12px}
+h1{text-align:center;font-size:20px;margin:10px 0 6px;color:#4a6fa5}
+.subtitle{text-align:center;font-size:12px;color:#888;margin-bottom:16px}
+.card{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:16px;margin-bottom:16px}
+.card h2{font-size:16px;margin-bottom:10px;color:#4a6fa5;border-bottom:2px solid #e0e6ef;padding-bottom:6px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-family:inherit;transition:all .15s}
+.btn-primary{background:#4a6fa5;color:#fff}
+.btn-primary:hover{background:#3a5f95}
+.btn-danger{background:#c0392b;color:#fff}
+.btn-danger:hover{background:#a93226}
+.btn-secondary{background:#eee;color:#333}
+.btn-secondary:hover{background:#ddd}
+.btn-sm{padding:6px 12px;font-size:12px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.patient-filter{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.patient-filter select{padding:6px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit}
+.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000;background:rgba(0,0,0,.5)}
+.modal[hidden]{display:none}
+.modal-card{background:#fff;border-radius:12px;padding:20px;max-width:90vw;width:440px;max-height:90vh;overflow:auto}
+.modal-card h3{margin-bottom:10px;color:#4a6fa5}
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:8px;color:#fff;font-size:13px;z-index:2000;opacity:0;transition:opacity .3s}
+.toast.show{opacity:1}
+.toast-success{background:#27ae60}
+.toast-error{background:#c0392b}
+.toast-warn{background:#d4ac0d}
+table.data-table{width:100%;border-collapse:collapse;font-size:12px}
+table.data-table th,table.data-table td{padding:6px 8px;border:1px solid #e0e0e0;text-align:center}
+table.data-table th{background:#f0f4f8;font-weight:bold;color:#4a6fa5;position:sticky;top:0}
+table.data-table tr:nth-child(even){background:#fafbfc}
+table.data-table tr:hover{background:#eef2f7}
+.table-wrap{max-height:300px;overflow:auto;border:1px solid #e0e0e0;border-radius:6px}
+.chart-container{position:relative;width:100%;max-width:100%}
+.chart-container canvas{width:100%!important}
+.tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:2px solid #e0e6ef;padding-bottom:0}
+.tab{padding:8px 16px;cursor:pointer;border:none;background:transparent;font-size:13px;font-family:inherit;border-bottom:3px solid transparent;color:#888;transition:all .15s}
+.tab.active{color:#4a6fa5;border-bottom-color:#4a6fa5;font-weight:bold}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.manual-input textarea{width:100%;min-height:120px;border:1px solid #ccc;border-radius:6px;padding:8px;font-size:12px;font-family:inherit;resize:vertical}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold;color:#fff}
+.badge-severe{background:#c0392b}
+.badge-high{background:#d35400}
+.badge-moderate{background:#d4ac0d;color:#333}
+.badge-mild{background:#27ae60}
+.empty-state{text-align:center;padding:40px 20px;color:#aaa;font-size:14px}
+.empty-state .icon{font-size:48px;margin-bottom:10px}
+@media(max-width:600px){
+  .container{padding:8px}
+  .card{padding:12px}
+  .actions{flex-direction:column}
+  .btn{width:100%;justify-content:center}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>\uD83D\uDCCA 頭痛チェック グラフビューア</h1>
+  <p class="subtitle">Headache-Yes-No QRコードを読み取り、HIT-6 / MIBS-4 / MHD / MMD を可視化</p>
+
+  <div class="card">
+    <div class="actions">
+      <button class="btn btn-primary" onclick="openScanner()">\uD83D\uDCF7 QRコード読み取り</button>
+      <button class="btn btn-secondary" onclick="openManualInput()">\uD83D\uDCDD 手動入力</button>
+      <button class="btn btn-secondary" onclick="exportCsv()">\uD83D\uDCE5 CSV出力</button>
+      <button class="btn btn-danger btn-sm" onclick="clearAllData()">\uD83D\uDDD1 全データ削除</button>
+    </div>
+    <div class="patient-filter">
+      <label>患者フィルタ:</label>
+      <select id="patient-select" onchange="applyFilter()">
+        <option value="__all__">全患者</option>
+      </select>
+      <span id="record-count" style="font-size:12px;color:#888"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('hit6-tab',this)">HIT-6 推移</button>
+      <button class="tab" onclick="switchTab('mhd-tab',this)">MHD / MMD</button>
+      <button class="tab" onclick="switchTab('scatter-tab',this)">HIT-6 \u00d7 MIBS-4</button>
+      <button class="tab" onclick="switchTab('mibs4-tab',this)">MIBS-4 推移</button>
+    </div>
+    <div id="hit6-tab" class="tab-panel active">
+      <div class="chart-container"><canvas id="hit6Chart"></canvas></div>
+    </div>
+    <div id="mhd-tab" class="tab-panel">
+      <div class="chart-container"><canvas id="mhdChart"></canvas></div>
+    </div>
+    <div id="scatter-tab" class="tab-panel">
+      <div class="chart-container"><canvas id="scatterChart"></canvas></div>
+    </div>
+    <div id="mibs4-tab" class="tab-panel">
+      <div class="chart-container"><canvas id="mibs4Chart"></canvas></div>
+    </div>
+    <div id="empty-charts" class="empty-state" style="display:none">
+      <div class="icon">\uD83D\uDCED</div>
+      <div>データがありません。QRコードを読み取ってください。</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>\uD83D\uDCCB データ一覧 <button class="btn btn-sm btn-secondary" onclick="toggleTable()" id="toggle-table-btn">展開</button></h2>
+    <div id="table-section" style="display:none">
+      <div class="table-wrap">
+        <table class="data-table" id="data-table">
+          <thead>
+            <tr>
+              <th>日付</th><th>氏名</th><th>MHD</th><th>MMD</th>
+              <th>HIT-6</th><th>MIBS-4</th><th>判定</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="data-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="scanner-modal" hidden>
+  <div class="modal-card">
+    <h3>\uD83D\uDCF7 QRコード読み取り</h3>
+    <div id="qr-reader"></div>
+    <div style="margin-top:10px;text-align:center">
+      <button class="btn btn-secondary" onclick="closeScanner()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="manual-modal" hidden>
+  <div class="modal-card">
+    <h3>\uD83D\uDCDD QRテキスト手動入力</h3>
+    <p style="font-size:12px;color:#888;margin-bottom:8px">QRコードの内容をペーストしてください</p>
+    <div class="manual-input">
+      <textarea id="manual-text" placeholder="頭痛チェックシート\n日付: 2025/1/24\n氏名: ...\n..."></textarea>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeManualInput()">キャンセル</button>
+      <button class="btn btn-primary" onclick="submitManualInput()">登録</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var STORAGE_KEY = 'headache_qr_data';
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+function saveData(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+function parseQrText(text) {
+  var d = {};
+  var dateM = text.match(/日付[：:]\s*(\d{2,4})\/?-?(\d{1,2})\/?-?(\d{1,2})/);
+  if (dateM) {
+    var y = parseInt(dateM[1]); if (y < 100) y += 2000;
+    var m = parseInt(dateM[2]), day = parseInt(dateM[3]);
+    d.date = y + '/' + String(m).padStart(2,'0') + '/' + String(day).padStart(2,'0');
+    d.sortKey = y * 10000 + m * 100 + day;
+  }
+  var nameM = text.match(/氏名[：:]\s*(.+)/);
+  if (nameM) d.name = nameM[1].trim().replace(/^-$/, '');
+  var docM = text.match(/担当医[：:]\s*(.+)/);
+  if (docM) d.doctor = docM[1].trim().replace(/^-$/, '');
+  var mhdM = text.match(/頭痛があった日[：:]?\s*(?:約)?(\d+)\s*日/);
+  if (mhdM) d.mhd = parseInt(mhdM[1]);
+  var mmdM = text.match(/痛み止め(?:を)?服用(?:した)?日[：:]?\s*(?:約)?(\d+)\s*日/);
+  if (mmdM) d.mmd = parseInt(mmdM[1]);
+  var ncM = text.match(/スッキリせず[：:]?\s*(?:約)?(\d+)\s*日/);
+  if (ncM) d.notClearDays = parseInt(ncM[1]);
+  var clM = text.match(/スッキリ[：:]?\s*(?:約)?(\d+)\s*日/);
+  if (clM) d.clearDays = parseInt(clM[1]);
+  var hit6M = text.match(/【HIT-6】\s*(\d+)点\s*(\S+)/);
+  if (hit6M) { d.hit6 = parseInt(hit6M[1]); d.hit6Verdict = hit6M[2]; }
+  else if (text.match(/【HIT-6】\s*未完/)) { d.hit6 = null; }
+  var mibs4M = text.match(/【MIBS-4】\s*(\d+)点\s*(\S+)/);
+  if (mibs4M) { d.mibs4 = parseInt(mibs4M[1]); d.mibs4Verdict = mibs4M[2]; }
+  else if (text.match(/【MIBS-4】\s*未完/)) { d.mibs4 = null; }
+  var hit6A = text.match(/【HIT-6】[^\n]*\n回答[：:]\s*([0-9,\-]+)/);
+  if (hit6A) d.hit6Answers = hit6A[1];
+  var mibs4A = text.match(/【MIBS-4】[^\n]*\n回答[：:]\s*([0-9,\-]+)/);
+  if (mibs4A) d.mibs4Answers = mibs4A[1];
+  var noteM = text.match(/【備考】\s*([\s\S]*)/);
+  if (noteM) d.note = noteM[1].trim();
+  d.id = Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  d.rawText = text;
+  return d;
+}
+
+var html5QrCode = null;
+
+function openScanner() {
+  document.getElementById('scanner-modal').hidden = false;
+  html5QrCode = new Html5Qrcode('qr-reader');
+  html5QrCode.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 280, height: 280 } },
+    onQrSuccess,
+    function(){}
+  ).catch(function(err) {
+    document.getElementById('qr-reader').innerHTML =
+      '<p style="color:#c00;text-align:center;padding:20px">カメラを起動できませんでした。<br>手動入力をお使いください。</p>';
+  });
+}
+
+function closeScanner() {
+  if (html5QrCode) {
+    html5QrCode.stop().catch(function(){});
+    html5QrCode.clear();
+    html5QrCode = null;
+  }
+  document.getElementById('scanner-modal').hidden = true;
+}
+
+function onQrSuccess(decodedText) {
+  closeScanner();
+  addRecord(decodedText);
+}
+
+function openManualInput() {
+  document.getElementById('manual-text').value = '';
+  document.getElementById('manual-modal').hidden = false;
+}
+function closeManualInput() {
+  document.getElementById('manual-modal').hidden = true;
+}
+function submitManualInput() {
+  var text = document.getElementById('manual-text').value.trim();
+  if (!text) { showToast('テキストを入力してください', 'error'); return; }
+  closeManualInput();
+  addRecord(text);
+}
+
+function addRecord(text) {
+  if (text.indexOf('頭痛チェックシート') < 0 && text.indexOf('HIT-6') < 0 && text.indexOf('MIBS-4') < 0) {
+    showToast('頭痛チェックシートのQRではありません', 'error');
+    return;
+  }
+  var rec = parseQrText(text);
+  if (!rec.date) { showToast('日付を読み取れませんでした', 'error'); return; }
+  var data = loadData();
+  var dup = data.find(function(r){ return r.date === rec.date && r.name === rec.name; });
+  if (dup) {
+    if (!confirm(rec.date + ' ' + (rec.name||'') + ' のデータは既に存在します。上書きしますか？')) return;
+    var idx = data.indexOf(dup);
+    data[idx] = rec;
+  } else {
+    data.push(rec);
+  }
+  data.sort(function(a,b){ return (a.sortKey||0) - (b.sortKey||0); });
+  saveData(data);
+  showToast(rec.date + ' のデータを登録しました', 'success');
+  refreshAll();
+}
+
+function deleteRecord(id) {
+  if (!confirm('このレコードを削除しますか？')) return;
+  var data = loadData().filter(function(r){ return r.id !== id; });
+  saveData(data);
+  refreshAll();
+  showToast('削除しました', 'warn');
+}
+
+function clearAllData() {
+  if (!confirm('全データを削除しますか？この操作は取り消せません。')) return;
+  saveData([]);
+  refreshAll();
+  showToast('全データを削除しました', 'warn');
+}
+
+function getFilteredData() {
+  var data = loadData();
+  var sel = document.getElementById('patient-select').value;
+  if (sel === '__all__') return data;
+  return data.filter(function(r){ return (r.name || '不明') === sel; });
+}
+
+function applyFilter() { refreshAll(); }
+
+function updatePatientSelect() {
+  var data = loadData();
+  var nameSet = {};
+  data.forEach(function(r){ nameSet[r.name || '不明'] = true; });
+  var names = Object.keys(nameSet);
+  var sel = document.getElementById('patient-select');
+  var cur = sel.value;
+  sel.innerHTML = '<option value="__all__">全患者</option>';
+  names.forEach(function(n) {
+    var o = document.createElement('option');
+    o.value = n; o.textContent = n;
+    sel.appendChild(o);
+  });
+  if (names.indexOf(cur) >= 0 || cur === '__all__') sel.value = cur;
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast toast-' + type + ' show';
+  setTimeout(function(){ t.className = 'toast'; }, 2500);
+}
+
+var tableOpen = false;
+function toggleTable() {
+  tableOpen = !tableOpen;
+  document.getElementById('table-section').style.display = tableOpen ? 'block' : 'none';
+  document.getElementById('toggle-table-btn').textContent = tableOpen ? '折りたたむ' : '展開';
+  if (tableOpen) renderTable();
+}
+
+function verdictBadge(score, type) {
+  if (score == null) return '-';
+  var cls, label;
+  if (type === 'hit6') {
+    if (score >= 60) { cls='severe'; label='重度'; }
+    else if (score >= 56) { cls='high'; label='かなり'; }
+    else if (score >= 50) { cls='moderate'; label='ある程度'; }
+    else { cls='mild'; label='影響なし'; }
+  } else {
+    if (score >= 5) { cls='severe'; label='重度'; }
+    else if (score >= 3) { cls='high'; label='中等度'; }
+    else if (score >= 1) { cls='moderate'; label='軽度'; }
+    else { cls='mild'; label='支障なし'; }
+  }
+  return '<span class="badge badge-' + cls + '">' + label + '</span>';
+}
+
+function renderTable() {
+  var data = getFilteredData();
+  var tbody = document.getElementById('data-tbody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="color:#aaa">データなし</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(function(r) {
+    return '<tr>' +
+      '<td>' + (r.date||'-') + '</td>' +
+      '<td>' + (r.name||'-') + '</td>' +
+      '<td>' + (r.mhd!=null?r.mhd:'-') + '</td>' +
+      '<td>' + (r.mmd!=null?r.mmd:'-') + '</td>' +
+      '<td>' + (r.hit6!=null?r.hit6+'点 '+verdictBadge(r.hit6,'hit6'):'-') + '</td>' +
+      '<td>' + (r.mibs4!=null?r.mibs4+'点 '+verdictBadge(r.mibs4,'mibs4'):'-') + '</td>' +
+      '<td style="font-size:11px">' + (r.hit6Verdict||'') + ' / ' + (r.mibs4Verdict||'') + '</td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="deleteRecord(\'' + r.id + '\')">削除</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+var chartHit6, chartMhd, chartScatter, chartMibs4;
+
+function shortDate(dateStr) {
+  if (!dateStr) return '';
+  var p = dateStr.split('/');
+  return p[0].slice(2) + '/' + parseInt(p[1]) + '/' + parseInt(p[2]);
+}
+
+function renderCharts() {
+  var data = getFilteredData();
+  var cnt = document.getElementById('record-count');
+  cnt.textContent = data.length + '件';
+
+  if (!data.length) {
+    document.getElementById('empty-charts').style.display = 'block';
+    ['hit6-tab','mhd-tab','scatter-tab','mibs4-tab'].forEach(function(id) {
+      document.getElementById(id).style.display = 'none';
+    });
+    return;
+  }
+  document.getElementById('empty-charts').style.display = 'none';
+  document.querySelectorAll('.tab-panel').forEach(function(p) {
+    if (p.classList.contains('active')) p.style.display = 'block';
+  });
+
+  var labels = data.map(function(r){ return shortDate(r.date); });
+  var hit6Data = data.map(function(r){ return r.hit6; });
+  var mibs4Data = data.map(function(r){ return r.mibs4; });
+  var mhdData = data.map(function(r){ return r.mhd; });
+  var mmdData = data.map(function(r){ return r.mmd; });
+
+  var pointColor = '#4a6f8e';
+  var lineColor = '#4a6f8e';
+
+  // --- HIT-6 Time Series ---
+  if (chartHit6) chartHit6.destroy();
+  var hit6Valid = hit6Data.filter(function(v){ return v != null; });
+  var hit6Min = hit6Valid.length ? Math.max(36, Math.min.apply(null, hit6Valid) - 4) : 36;
+  var hit6Max = hit6Valid.length ? Math.min(78, Math.max.apply(null, hit6Valid) + 4) : 78;
+  chartHit6 = new Chart(document.getElementById('hit6Chart'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'HIT-6',
+        data: hit6Data,
+        borderColor: lineColor,
+        backgroundColor: pointColor,
+        pointBackgroundColor: pointColor,
+        pointRadius: 6,
+        pointHoverRadius: 9,
+        borderWidth: 2,
+        tension: 0.15,
+        fill: false,
+        spanGaps: true
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        datalabels: {
+          anchor: 'end',
+          align: 'top',
+          offset: 4,
+          color: '#333',
+          font: { size: 12, weight: 'bold' },
+          formatter: function(v){ return v != null ? v : ''; }
+        }
+      },
+      scales: {
+        y: {
+          min: hit6Min, max: hit6Max,
+          title: { display: true, text: 'HIT-6', font: { size: 14 } },
+          grid: { color: '#e8e8e8' }
+        },
+        x: {
+          title: { display: true, text: '日付', font: { size: 14 } },
+          grid: { display: false },
+          ticks: { maxRotation: 45, minRotation: 30 }
+        }
+      },
+      layout: { padding: { top: 24 } }
+    },
+    plugins: [ChartDataLabels]
+  });
+
+  // --- MIBS-4 Time Series ---
+  if (chartMibs4) chartMibs4.destroy();
+  chartMibs4 = new Chart(document.getElementById('mibs4Chart'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'MIBS-4',
+        data: mibs4Data,
+        borderColor: '#4f9d6b',
+        backgroundColor: '#4f9d6b',
+        pointBackgroundColor: '#4f9d6b',
+        pointRadius: 6,
+        pointHoverRadius: 9,
+        borderWidth: 2,
+        tension: 0.15,
+        fill: false,
+        spanGaps: true
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        datalabels: {
+          anchor: 'end',
+          align: 'top',
+          offset: 4,
+          color: '#333',
+          font: { size: 12, weight: 'bold' },
+          formatter: function(v){ return v != null ? v : ''; }
+        }
+      },
+      scales: {
+        y: {
+          min: 0, max: 12,
+          title: { display: true, text: 'MIBS-4', font: { size: 14 } },
+          grid: { color: '#e8e8e8' }
+        },
+        x: {
+          title: { display: true, text: '日付', font: { size: 14 } },
+          grid: { display: false },
+          ticks: { maxRotation: 45, minRotation: 30 }
+        }
+      },
+      layout: { padding: { top: 24 } }
+    },
+    plugins: [ChartDataLabels]
+  });
+
+  // --- MHD / MMD Bar Chart ---
+  if (chartMhd) chartMhd.destroy();
+  chartMhd = new Chart(document.getElementById('mhdChart'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'MHD (頭痛日数)',
+          data: mhdData,
+          backgroundColor: 'rgba(232,132,42,0.7)',
+          borderColor: '#e8842a',
+          borderWidth: 1
+        },
+        {
+          label: 'MMD (服薬日数)',
+          data: mmdData,
+          backgroundColor: 'rgba(79,157,107,0.7)',
+          borderColor: '#4f9d6b',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+        datalabels: {
+          anchor: 'end',
+          align: 'top',
+          offset: 2,
+          color: '#333',
+          font: { size: 11, weight: 'bold' },
+          formatter: function(v){ return v != null ? v : ''; }
+        }
+      },
+      scales: {
+        y: {
+          min: 0, max: 28,
+          title: { display: true, text: '日数', font: { size: 14 } },
+          grid: { color: '#e8e8e8' }
+        },
+        x: {
+          title: { display: true, text: '日付', font: { size: 14 } },
+          grid: { display: false },
+          ticks: { maxRotation: 45, minRotation: 30 }
+        }
+      },
+      layout: { padding: { top: 24 } }
+    },
+    plugins: [ChartDataLabels]
+  });
+
+  // --- HIT-6 vs MIBS-4 Scatter ---
+  if (chartScatter) chartScatter.destroy();
+  var scatterData = data
+    .filter(function(r){ return r.hit6 != null && r.mibs4 != null; })
+    .map(function(r){ return { x: r.mibs4, y: r.hit6, date: shortDate(r.date) }; });
+
+  chartScatter = new Chart(document.getElementById('scatterChart'), {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'HIT-6 × MIBS-4',
+        data: scatterData,
+        backgroundColor: pointColor,
+        pointRadius: 7,
+        pointHoverRadius: 10
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        datalabels: {
+          align: 'right',
+          anchor: 'end',
+          offset: 6,
+          color: '#555',
+          font: { size: 10 },
+          formatter: function(v, ctx) {
+            var pt = ctx.dataset.data[ctx.dataIndex];
+            return pt.date + '\n' + pt.x + ';' + pt.y;
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              var pt = ctx.raw;
+              return pt.date + ' \u2014 MIBS-4: ' + pt.x + ', HIT-6: ' + pt.y;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          min: 0, max: 12,
+          title: { display: true, text: 'MIBS-4', font: { size: 14 } },
+          grid: { color: '#e8e8e8' }
+        },
+        y: {
+          min: 36, max: 78,
+          title: { display: true, text: 'HIT-6', font: { size: 14 } },
+          grid: { color: '#e8e8e8' }
+        }
+      },
+      layout: { padding: { top: 20, right: 40 } }
+    },
+    plugins: [
+      ChartDataLabels,
+      {
+        id: 'refLines',
+        beforeDraw: function(chart) {
+          var ctx = chart.ctx;
+          var xAxis = chart.scales.x;
+          var yAxis = chart.scales.y;
+          ctx.save();
+          ctx.strokeStyle = '#bbb';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([6,4]);
+          var y60 = yAxis.getPixelForValue(60);
+          ctx.beginPath(); ctx.moveTo(xAxis.left, y60); ctx.lineTo(xAxis.right, y60); ctx.stroke();
+          var x5 = xAxis.getPixelForValue(5);
+          ctx.beginPath(); ctx.moveTo(x5, yAxis.top); ctx.lineTo(x5, yAxis.bottom); ctx.stroke();
+          ctx.restore();
+        }
+      }
+    ]
+  });
+}
+
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); p.style.display = 'none'; });
+  btn.classList.add('active');
+  var panel = document.getElementById(tabId);
+  panel.classList.add('active');
+  panel.style.display = 'block';
+}
+
+function exportCsv() {
+  var data = getFilteredData();
+  if (!data.length) { showToast('データがありません', 'error'); return; }
+  var header = '日付,氏名,担当医,MHD,MMD,スッキリせず,スッキリ,HIT-6,HIT-6判定,MIBS-4,MIBS-4判定,備考';
+  var rows = data.map(function(r) {
+    return [r.date, r.name||'', r.doctor||'', r.mhd!=null?r.mhd:'', r.mmd!=null?r.mmd:'',
+      r.notClearDays!=null?r.notClearDays:'', r.clearDays!=null?r.clearDays:'',
+      r.hit6!=null?r.hit6:'', r.hit6Verdict||'', r.mibs4!=null?r.mibs4:'', r.mibs4Verdict||'',
+      (r.note||'').replace(/"/g,'""')]
+      .map(function(v){ return '"'+v+'"'; }).join(',');
+  });
+  var csv = '\uFEFF' + header + '\n' + rows.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'headache_data_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSVをダウンロードしました', 'success');
+}
+
+function refreshAll() {
+  updatePatientSelect();
+  renderCharts();
+  if (tableOpen) renderTable();
+}
+
+refreshAll();
+</script>
+</body>
+</html>
