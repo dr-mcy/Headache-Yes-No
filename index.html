@@ -67,6 +67,7 @@
   .actions .reset{background:#eee;color:#333}
   .actions .print{background:#4f9d6b;color:#fff}
   .actions .qr{background:#e8842a;color:#fff}
+  .actions .delete-all{background:#c0392b;color:#fff}
   .footer-note{margin-top:18px;font-size:10px;color:#888;text-align:center;line-height:1.5}
   .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000}
   .modal[hidden]{display:none}
@@ -149,6 +150,7 @@
     <button class="reset" type="button" onclick="resetAll()">リセット</button>
     <button class="print" type="button" onclick="window.print()">印刷</button>
     <button class="qr" type="button" onclick="openQr()">QRコード</button>
+    <button class="delete-all" type="button" onclick="deleteAllData()">全データ削除</button>
   </div>
 
   <div class="footer-note">
@@ -250,7 +252,7 @@ function updateMibs4(){
   let c,h,b;
   if(total>=5){c='severe';h='「重度」と判定されます。';b='頭痛が起こっていない時でも、頭痛によって仕事や学校、人付き合いなどの大切な活動が妨げられたり、無力感を覚えたりすることがあるようです。<br><span class="advice">対処法や急性期治療の見直しに加え、予防治療が推奨されます。</span>';}
   else if(total>=3){c='high';h='「中等度」と判定されます。';b='頭痛が起こっていない時でも、頭痛が日常生活になんらかの影響を与えているようです。<br><span class="advice">対処法や急性期治療の見直しに加え、予防治療を検討しましょう。</span>';}
-  else if(total>=1){c='moderate';h='「軽度」と判定されます。';b='頭痛が起こっていない時に、頭痛が日常生活に影響を与えていることはあまりないようですが、<span class="advice">対処法や急性期治療薬を見直すことができます。</span>';}
+  else if(total>=1){c='moderate';h='「軽度」と判定されます。';b='頭痛が起こっていない時に、頭痛が日常生活に影響を与ていることはあまりないようですが、<span class="advice">対処法や急性期治療薬を見直すことができます。</span>';}
   else{c='mild';h='「支障なし」と判定されます。';b='今後も定期的にチェックをして、頭痛が日常生活にどのような影響を与えるかを知っておくことをお勧めします。';}
   v.className=`verdict ${c}`;v.innerHTML=`<h3>MIBS-4判定（${total}点）: ${h}</h3><div>${b}</div>`;
 }
@@ -269,6 +271,16 @@ function resetAll(){
   document.querySelectorAll('input[type="text"],input[type="number"],textarea').forEach(el=>el.value='');
   document.getElementById('f-sex').value='';
   setEntryDate();
+  updateHit6(); updateMibs4();
+}
+
+function deleteAllData(){
+  if(!confirm('全ての入力データを削除します。\nこの操作は元に戻せません。\n\n本当に削除しますか？')) return;
+  hit6.fill(null); mibs4.fill(null);
+  document.querySelectorAll('.options button').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('input[type="text"],input[type="number"],textarea').forEach(el=>el.value='');
+  document.getElementById('f-sex').value='';
+  document.getElementById('f-entry-date').value='';
   updateHit6(); updateMibs4();
 }
 
