@@ -62,12 +62,12 @@
   .free{margin-top:30px}
   .free label{display:block;font-weight:bold;margin-bottom:6px;font-size:14px}
   .free textarea{width:100%;min-height:100px;border:1px solid #ccc;border-radius:6px;padding:10px;font-size:13px;font-family:inherit;resize:vertical}
-  .actions{margin-top:18px;text-align:center}
-  .actions button{padding:10px 22px;margin:0 6px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-family:inherit}
+  .actions{margin-top:18px;display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap}
+  .actions button{padding:10px 22px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-family:inherit}
   .actions .reset{background:#eee;color:#333}
   .actions .print{background:#4f9d6b;color:#fff}
   .actions .qr{background:#e8842a;color:#fff}
-  .actions .delete-all{background:#c0392b;color:#fff}
+  .actions .delete-all{background:#c0392b;color:#fff;margin-left:auto}
   .footer-note{margin-top:18px;font-size:10px;color:#888;text-align:center;line-height:1.5}
   .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000}
   .modal[hidden]{display:none}
@@ -252,7 +252,7 @@ function updateMibs4(){
   let c,h,b;
   if(total>=5){c='severe';h='「重度」と判定されます。';b='頭痛が起こっていない時でも、頭痛によって仕事や学校、人付き合いなどの大切な活動が妨げられたり、無力感を覚えたりすることがあるようです。<br><span class="advice">対処法や急性期治療の見直しに加え、予防治療が推奨されます。</span>';}
   else if(total>=3){c='high';h='「中等度」と判定されます。';b='頭痛が起こっていない時でも、頭痛が日常生活になんらかの影響を与えているようです。<br><span class="advice">対処法や急性期治療の見直しに加え、予防治療を検討しましょう。</span>';}
-  else if(total>=1){c='moderate';h='「軽度」と判定されます。';b='頭痛が起こっていない時に、頭痛が日常生活に影響を与ていることはあまりないようですが、<span class="advice">対処法や急性期治療薬を見直すことができます。</span>';}
+  else if(total>=1){c='moderate';h='「軽度」と判定されます。';b='頭痛が起こっていない時に、頭痛が日常生活に影響を与えていることはあまりないようですが、<span class="advice">対処法や急性期治療薬を見直すことができます。</span>';}
   else{c='mild';h='「支障なし」と判定されます。';b='今後も定期的にチェックをして、頭痛が日常生活にどのような影響を与えるかを知っておくことをお勧めします。';}
   v.className=`verdict ${c}`;v.innerHTML=`<h3>MIBS-4判定（${total}点）: ${h}</h3><div>${b}</div>`;
 }
