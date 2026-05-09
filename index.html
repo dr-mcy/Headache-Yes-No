@@ -8,9 +8,10 @@
   *{box-sizing:border-box}
   body{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;background:#f6f6f6;margin:0;padding:16px;color:#333}
   .container{max-width:1100px;margin:0 auto;background:#fff;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-radius:8px}
-  .top-form{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;font-size:13px;border:1px solid #ddd;border-radius:6px;padding:10px}
+  .top-form{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;font-size:13px;border:1px solid #ddd;border-radius:6px;padding:10px;align-items:center}
   .top-form label{display:flex;align-items:center;gap:4px}
   .top-form input{border:none;border-bottom:1px solid #999;padding:2px 4px;font-size:13px}
+  .top-form select{border:none;border-bottom:1px solid #999;padding:2px 4px;font-size:13px;font-family:inherit;background:transparent;cursor:pointer}
   h1{text-align:center;font-size:22px;margin:8px 0 16px}
   h1 .o{color:#e8842a}
   h1 .g{color:#4f9d6b}
@@ -91,11 +92,20 @@
 <body>
 <div class="container">
   <div class="top-form">
-    <label>年 <input type="text" size="4"></label>
-    <label>月 <input type="text" size="2"></label>
-    <label>日 <input type="text" size="2"></label>
-    <label>氏名 <input type="text" size="14"></label>
-    <label>担当医 <input type="text" size="10"></label>
+    <label><input type="text" id="f-year" size="4">年</label>
+    <label><input type="text" id="f-month" size="2">月</label>
+    <label><input type="text" id="f-day" size="2">日</label>
+    <label>氏名 <input type="text" id="f-name" size="14"></label>
+    <label>性別
+      <select id="f-sex">
+        <option value="">--</option>
+        <option>男</option>
+        <option>女</option>
+        <option>その他</option>
+      </select>
+    </label>
+    <label>病院ID <input type="text" id="f-hid" size="10"></label>
+    <label>担当医 <input type="text" id="f-doctor" size="10"></label>
   </div>
 
   <h1>頭痛が<span class="o">あるとき</span>・頭痛が<span class="g">ないとき</span>チェックシート</h1>
@@ -217,60 +227,61 @@ function mibs4Verdict(t){
 
 function updateHit6(){
   const cnt=[0,0,0,0,0]; hit6.forEach(s=>{if(s!==null)cnt[s]++;});
-  const cs = cnt.map((c,i)=>c*HIT6_PT[i]); const total = cs.reduce((a,b)=>a+b,0);
-  document.getElementById('hit6-totals').innerHTML = cs.map((s,i)=>`<div class="row"><span>${i+1}列目（〇の数 ${cnt[i]} ×${HIT6_PT[i]}点）</span><span><b>${s}</b> 点</span></div>`).join("");
-  document.getElementById('hit6-grand').innerHTML = `総合得点 <span class="num">${total}</span>点`;
-  const v = document.getElementById('hit6-verdict');
-  if(hit6.some(s=>s===null)){ v.className='verdict empty'; v.textContent='※ 全 6 問に回答すると判定が表示されます（最低36点〜最高78点）'; return; }
+  const cs=cnt.map((c,i)=>c*HIT6_PT[i]); const total=cs.reduce((a,b)=>a+b,0);
+  document.getElementById('hit6-totals').innerHTML=cs.map((s,i)=>`<div class="row"><span>${i+1}列目（〇の数 ${cnt[i]} ×${HIT6_PT[i]}点）</span><span><b>${s}</b> 点</span></div>`).join("");
+  document.getElementById('hit6-grand').innerHTML=`総合得点 <span class="num">${total}</span>点`;
+  const v=document.getElementById('hit6-verdict');
+  if(hit6.some(s=>s===null)){v.className='verdict empty';v.textContent='※ 全 6 問に回答すると判定が表示されます（最低36点〜最高78点）';return;}
   let c,h,b;
   if(total>=60){c='severe';h='重度の支障があります。';b='頭痛に悩まされる他の人々よりも重症であり、頭痛のせいで、家庭や仕事、学校生活、人付き合いなどの大切な活動の多くが妨げられています。<br><span class="advice">どうすればこのつらい状態から抜け出せるか、早めに主治医に相談しましょう。</span>';}
   else if(total>=56){c='high';h='かなりの支障があります。';b='重度の頭痛のせいで、家庭や仕事、学校生活、人付き合いなどの大切な活動が妨げられています。<br><span class="advice">このような状態を我慢せず、これからの治療について早めに主治医に相談しましょう。</span>';}
   else if(total>=50){c='moderate';h='ある程度の支障があります。';b='頭痛のせいで、家庭や仕事、学校生活、人付き合いなどの大切な活動が妨げられる状況は正常とはいえません。<br><span class="advice">自分に合った治療を受けられているかどうか、改めて主治医に相談しましょう。</span>';}
   else{c='mild';h='日常生活に影響を与えるような頭痛はないようです。';b='今後も定期的にチェックをして、頭痛が日常生活にどのような影響を与えるかを知っておくことをお勧めします。';}
-  v.className=`verdict ${c}`; v.innerHTML=`<h3>HIT-6判定（${total}点）: ${h}</h3><div>${b}</div>`;
+  v.className=`verdict ${c}`;v.innerHTML=`<h3>HIT-6判定（${total}点）: ${h}</h3><div>${b}</div>`;
 }
 
 function updateMibs4(){
   const cnt=[0,0,0,0,0,0]; mibs4.forEach(s=>{if(s!==null)cnt[s]++;});
-  const cs = cnt.map((c,i)=>c*MIBS4_PT[i]); const total = cs.reduce((a,b)=>a+b,0);
-  document.getElementById('mibs4-totals').innerHTML = cs.map((s,i)=>`<div class="row"><span>${i+1}列目（〇の数 ${cnt[i]} ×${MIBS4_PT[i]}点）</span><span><b>${s}</b> 点</span></div>`).join("");
-  document.getElementById('mibs4-grand').innerHTML = `総合得点 <span class="num">${total}</span>点`;
-  const v = document.getElementById('mibs4-verdict');
-  if(mibs4.some(s=>s===null)){ v.className='verdict empty'; v.textContent='※ 全 4 問に回答すると判定が表示されます（0〜12点）'; return; }
+  const cs=cnt.map((c,i)=>c*MIBS4_PT[i]); const total=cs.reduce((a,b)=>a+b,0);
+  document.getElementById('mibs4-totals').innerHTML=cs.map((s,i)=>`<div class="row"><span>${i+1}列目（〇の数 ${cnt[i]} ×${MIBS4_PT[i]}点）</span><span><b>${s}</b> 点</span></div>`).join("");
+  document.getElementById('mibs4-grand').innerHTML=`総合得点 <span class="num">${total}</span>点`;
+  const v=document.getElementById('mibs4-verdict');
+  if(mibs4.some(s=>s===null)){v.className='verdict empty';v.textContent='※ 全 4 問に回答すると判定が表示されます（0〜12点）';return;}
   let c,h,b;
   if(total>=5){c='severe';h='「重度」と判定されます。';b='頭痛が起こっていない時でも、頭痛によって仕事や学校、人付き合いなどの大切な活動が妨げられたり、無力感を覚えたりすることがあるようです。<br><span class="advice">対処法や急性期治療の見直しに加え、予防治療が推奨されます。</span>';}
   else if(total>=3){c='high';h='「中等度」と判定されます。';b='頭痛が起こっていない時でも、頭痛が日常生活になんらかの影響を与えているようです。<br><span class="advice">対処法や急性期治療の見直しに加え、予防治療を検討しましょう。</span>';}
   else if(total>=1){c='moderate';h='「軽度」と判定されます。';b='頭痛が起こっていない時に、頭痛が日常生活に影響を与えていることはあまりないようですが、<span class="advice">対処法や急性期治療薬を見直すことができます。</span>';}
   else{c='mild';h='「支障なし」と判定されます。';b='今後も定期的にチェックをして、頭痛が日常生活にどのような影響を与えるかを知っておくことをお勧めします。';}
-  v.className=`verdict ${c}`; v.innerHTML=`<h3>MIBS-4判定（${total}点）: ${h}</h3><div>${b}</div>`;
+  v.className=`verdict ${c}`;v.innerHTML=`<h3>MIBS-4判定（${total}点）: ${h}</h3><div>${b}</div>`;
 }
 
 function resetAll(){
   hit6.fill(null); mibs4.fill(null);
   document.querySelectorAll('.options button').forEach(b=>b.classList.remove('on'));
-  document.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(el=>el.value='');
+  document.querySelectorAll('input[type="text"],input[type="number"],textarea').forEach(el=>el.value='');
+  document.getElementById('f-sex').value='';
   updateHit6(); updateMibs4();
 }
 
-// QRコード関連
 function buildQrText(){
-  const tf = document.querySelectorAll('.top-form input');
-  const sm = document.querySelectorAll('.summary input');
-  const free = (document.querySelector('.free textarea').value||'').trim();
-  const hDone = !hit6.some(s=>s===null);
-  const mDone = !mibs4.some(s=>s===null);
-  const hT = hit6Total();
-  const mT = mibs4Total();
-  const lines = [
+  const g=id=>(document.getElementById(id)||{value:''}).value||'';
+  const sm=document.querySelectorAll('.summary input');
+  const free=(document.querySelector('.free textarea').value||'').trim();
+  const hDone=!hit6.some(s=>s===null);
+  const mDone=!mibs4.some(s=>s===null);
+  const hT=hit6Total(), mT=mibs4Total();
+  const lines=[
     '頭痛チェックシート',
-    `日付: ${tf[0].value||'-'}/${tf[1].value||'-'}/${tf[2].value||'-'}`,
-    `氏名: ${tf[3].value||'-'}`,
-    `担当医: ${tf[4].value||'-'}`,
+    `日付: ${g('f-year')||'-'}/${g('f-month')||'-'}/${g('f-day')||'-'}`,
+    `氏名: ${g('f-name')||'-'}`,
+    `性別: ${g('f-sex')||'-'}`,
+    `病院ID: ${g('f-hid')||'-'}`,
+    `担当医: ${g('f-doctor')||'-'}`,
     '【過去4週間】',
-    `頭痛があった日: ${sm[0].value||'-'}日`,
-    `痛み止め服用日: ${sm[1].value||'-'}日`,
-    `スッキリせず: ${sm[2].value||'-'}日`,
-    `スッキリ: ${sm[3].value||'-'}日`,
+    `頭痛があった日: ${sm[0]?sm[0].value||'-':'-'}日`,
+    `痛み止め服用日: ${sm[1]?sm[1].value||'-':'-'}日`,
+    `スッキリせず: ${sm[2]?sm[2].value||'-':'-'}日`,
+    `スッキリ: ${sm[3]?sm[3].value||'-':'-'}日`,
     `【HIT-6】 ${hDone?hT+'点 '+hit6Verdict(hT):'未完'}`,
     `回答: ${hit6.map(s=>s===null?'-':(s+1)).join(',')}`,
     `【MIBS-4】 ${mDone?mT+'点 '+mibs4Verdict(mT):'未完'}`,
@@ -281,52 +292,45 @@ function buildQrText(){
 }
 
 function openQr(){
-  const text = buildQrText();
-  document.getElementById('qr-text').textContent = text;
-  const area = document.getElementById('qr-area');
-  if(typeof qrcode === 'undefined'){
-    area.innerHTML = '<p class="qr-error">QRコードライブラリの読み込みに失敗しました。インターネット接続を確認してください。</p>';
-    document.getElementById('qr-modal').hidden = false;
+  const text=buildQrText();
+  document.getElementById('qr-text').textContent=text;
+  const area=document.getElementById('qr-area');
+  if(typeof qrcode==='undefined'){
+    area.innerHTML='<p class="qr-error">QRコードライブラリの読み込みに失敗しました。インターネット接続を確認してください。</p>';
+    document.getElementById('qr-modal').hidden=false;
     return;
   }
-  // UTF-8対応（日本語）
   try{
-    if(qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs['UTF-8']){
-      qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
-    } else {
-      qrcode.stringToBytes = function(s){
-        const u = unescape(encodeURIComponent(s));
-        const a = []; for(let i=0;i<u.length;i++) a.push(u.charCodeAt(i)); return a;
+    if(qrcode.stringToBytesFuncs&&qrcode.stringToBytesFuncs['UTF-8']){
+      qrcode.stringToBytes=qrcode.stringToBytesFuncs['UTF-8'];
+    }else{
+      qrcode.stringToBytes=function(s){
+        const u=unescape(encodeURIComponent(s));
+        const a=[];for(let i=0;i<u.length;i++)a.push(u.charCodeAt(i));return a;
       };
     }
   }catch(e){}
-  let qr = null;
+  let qr=null;
   for(let t=4;t<=40;t++){
-    try{
-      const x = qrcode(t, 'M');
-      x.addData(text);
-      x.make();
-      qr = x; break;
-    }catch(e){ qr = null; }
+    try{const x=qrcode(t,'M');x.addData(text);x.make();qr=x;break;}catch(e){qr=null;}
   }
   if(!qr){
-    area.innerHTML = '<p class="qr-error">入力情報が多すぎてQRコードを生成できませんでした。備考を短くしてもう一度お試しください。</p>';
-  } else {
-    area.innerHTML = qr.createImgTag(5, 8);
+    area.innerHTML='<p class="qr-error">入力情報が多すぎてQRコードを生成できませんでした。備考を短くしてもう一度お試しください。</p>';
+  }else{
+    area.innerHTML=qr.createImgTag(5,8);
   }
-  document.getElementById('qr-modal').hidden = false;
+  document.getElementById('qr-modal').hidden=false;
 }
 
 function closeQr(){
-  document.getElementById('qr-modal').hidden = true;
+  document.getElementById('qr-modal').hidden=true;
 }
 
-// Escキーで閉じる
-document.addEventListener('keydown', function(e){
-  if(e.key === 'Escape'){ closeQr(); }
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){closeQr();}
 });
 
-render(); updateHit6(); updateMibs4();
+render();updateHit6();updateMibs4();
 </script>
 </body>
 </html>
