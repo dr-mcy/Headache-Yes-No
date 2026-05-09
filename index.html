@@ -92,16 +92,16 @@
 <body>
 <div class="container">
   <div class="top-form">
-    <label><input type="text" id="f-year" size="4">年</label>
-    <label><input type="text" id="f-month" size="2">月</label>
-    <label><input type="text" id="f-day" size="2">日</label>
+    <label>記入日 <input type="text" id="f-entry-date" size="10"></label>
+    <label>生年月日 <input type="text" id="f-byear" size="4">年</label>
+    <label><input type="text" id="f-bmonth" size="2">月</label>
+    <label><input type="text" id="f-bday" size="2">日</label>
     <label>氏名 <input type="text" id="f-name" size="14"></label>
     <label>性別
       <select id="f-sex">
         <option value="">--</option>
         <option>男</option>
         <option>女</option>
-        <option>その他</option>
       </select>
     </label>
     <label>病院ID <input type="text" id="f-hid" size="10"></label>
@@ -255,11 +255,20 @@ function updateMibs4(){
   v.className=`verdict ${c}`;v.innerHTML=`<h3>MIBS-4判定（${total}点）: ${h}</h3><div>${b}</div>`;
 }
 
+function setEntryDate(){
+  const d=new Date();
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,'0');
+  const day=String(d.getDate()).padStart(2,'0');
+  document.getElementById('f-entry-date').value=y+'/'+m+'/'+day;
+}
+
 function resetAll(){
   hit6.fill(null); mibs4.fill(null);
   document.querySelectorAll('.options button').forEach(b=>b.classList.remove('on'));
   document.querySelectorAll('input[type="text"],input[type="number"],textarea').forEach(el=>el.value='');
   document.getElementById('f-sex').value='';
+  setEntryDate();
   updateHit6(); updateMibs4();
 }
 
@@ -270,9 +279,11 @@ function buildQrText(){
   const hDone=!hit6.some(s=>s===null);
   const mDone=!mibs4.some(s=>s===null);
   const hT=hit6Total(), mT=mibs4Total();
+  const bday=(g('f-byear')||'-')+'/'+(g('f-bmonth')||'-')+'/'+(g('f-bday')||'-');
   const lines=[
     '頭痛チェックシート',
-    `日付: ${g('f-year')||'-'}/${g('f-month')||'-'}/${g('f-day')||'-'}`,
+    `記入日: ${g('f-entry-date')||'-'}`,
+    `生年月日: ${bday}`,
     `氏名: ${g('f-name')||'-'}`,
     `性別: ${g('f-sex')||'-'}`,
     `病院ID: ${g('f-hid')||'-'}`,
@@ -330,7 +341,7 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){closeQr();}
 });
 
-render();updateHit6();updateMibs4();
+render(); updateHit6(); updateMibs4(); setEntryDate();
 </script>
 </body>
 </html>
