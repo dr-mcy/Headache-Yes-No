@@ -158,7 +158,7 @@
     HIT-6™: 坂井 文彦ほか. 臨床医薬 2004; 20: 1045-1054を一部改変<br>
     MIBS-4: Buse DC, et al.: Mayo Clin Proc. 2009; 84(5): 422-435を一部改変
   </div>
-  <div class="version">v1.1.1</div>
+  <div class="version" id="app-version"></div>
 </div>
 
 <div class="modal" id="qr-modal" hidden>
@@ -174,6 +174,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
+// グラフビューア(Headache-Yes-No-chart)と同じバージョンで揃える。版の定義はここ1か所のみ。
+const APP_VERSION = 'v1.2.0';
+document.getElementById('app-version').textContent = APP_VERSION;
+
 const HIT6_Q = [
   {q:"頭が痛いとき、痛みがひどいことがどれくらいありますか?", opts:["全くない","ほとんどない","時々ある","しばしばある","いつもそうだ"]},
   {q:"頭痛のせいで、日常生活に支障が出ることがありますか?", note:"(例えば、家事、仕事、学校生活、人付き合いなど)", opts:["全くない","ほとんどない","時々ある","しばしばある","いつもそうだ"]},
@@ -297,6 +301,7 @@ function buildQrText(){
   const bday=(g('f-byear')||'-')+'/'+(g('f-bmonth')||'-')+'/'+(g('f-bday')||'-');
   const lines=[
     '頭痛チェックシート',
+    `バージョン: ${APP_VERSION}`,
     `記入日: ${g('f-entry-date')||'-'}`,
     `生年月日: ${bday}`,
     `氏名: ${g('f-name')||'-'}`,
