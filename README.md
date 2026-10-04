@@ -18,6 +18,12 @@
 4. 全問回答後、HIT-6 判定 / MIBS-4 判定が自動表示される。
 5. 「印刷」でカルテ貼付用にA4出力、「リセット」で初期化。
 
+## バージョン運用（グラフビューアと同じバージョンで揃える）
+
+- 本アプリ（G）と [Headache-Yes-No-chart](https://github.com/dr-mcy/Headache-Yes-No-chart)（C、グラフビューア）は**同じバージョン番号で揃えます**。片方だけ変更する場合も（改変していない側も）両方のバージョンを上げ、**同時に公開**してください。
+- 本アプリはQRテキストの2行目に `バージョン: vX.Y.Z` を出力します。C は版が一致しないQRを登録しません。
+- 版の定義は `index.html` の `APP_VERSION` の1か所です（画面最下行の表示もここから埋めます）。
+
 ## GitHub Pages で公開する
 
 リポジトリの **Settings → Pages** で `main` ブランチの `/ (root)` を公開元に設定すると、`https://dr-mcy.github.io/Headache-Yes-No/` で動作します。
