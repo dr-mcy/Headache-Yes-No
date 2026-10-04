@@ -201,8 +201,9 @@ function render(){
 
 function sel(which,i,j){
   const arr = which==='hit6'?hit6:mibs4;
-  arr[i] = j;
-  document.querySelectorAll(`#${which} .options button[data-q="${i}"]`).forEach(b=>{ b.classList.toggle('on', parseInt(b.dataset.j)===j); });
+  const next = (arr[i]===j) ? null : j;
+  arr[i] = next;
+  document.querySelectorAll(`#${which} .options button[data-q="${i}"]`).forEach(b=>{ b.classList.toggle('on', next!==null && parseInt(b.dataset.j)===next); });
   if(which==='hit6') updateHit6(); else updateMibs4();
 }
 
