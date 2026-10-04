@@ -72,11 +72,11 @@
   .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000}
   .modal[hidden]{display:none}
   .modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.55)}
-  .modal-card{position:relative;background:#fff;padding:22px 24px;border-radius:10px;max-width:90vw;max-height:90vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);text-align:center;width:360px}
+  .modal-card{position:relative;background:#fff;padding:22px 16px;border-radius:10px;max-width:94vw;max-height:94vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);text-align:center;width:392px;box-sizing:border-box}
   .modal-card h3{margin:0 0 6px;color:#4f9d6b;font-size:17px}
   .modal-card .qr-note{font-size:12px;color:#666;margin:0 0 14px;line-height:1.5}
-  .modal-card #qr-area{margin:0 auto 12px;display:inline-block;min-height:280px}
-  .modal-card #qr-area img{display:block;margin:0 auto;width:280px;height:280px;image-rendering:pixelated}
+  .modal-card #qr-area{margin:0 auto 12px;width:100%;line-height:0}
+  .modal-card #qr-area svg{display:block;margin:0 auto;background:#fff;shape-rendering:crispEdges}
   .modal-card #qr-text{background:#f8f8f8;border:1px solid #eee;border-radius:6px;padding:10px;font-size:11px;text-align:left;white-space:pre-wrap;word-break:break-all;max-height:140px;overflow:auto;font-family:inherit;line-height:1.55;color:#444;margin:0}
   .modal-card .close-btn{margin-top:14px;padding:8px 26px;background:#888;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-size:13px}
   .modal-card .close-btn:hover{background:#666}
@@ -336,14 +336,24 @@ function openQr(){
   }catch(e){}
   let qr=null;
   for(let t=4;t<=40;t++){
-    try{const x=qrcode(t,'M');x.addData(text);x.make();qr=x;break;}catch(e){qr=null;}
+    try{const x=qrcode(t,'L');x.addData(text);x.make();qr=x;break;}catch(e){qr=null;}
   }
+  document.getElementById('qr-modal').hidden=false;
   if(!qr){
     area.innerHTML='<p class="qr-error">入力情報が多すぎてQRコードを生成できませんでした。備考を短くしてもう一度お試しください。</p>';
   }else{
-    area.innerHTML=qr.createImgTag(5,8);
+    // quiet zone は規格どおり 4 module。表示幅は 1 module = 整数の実 px になるよう丸め、非整数縮小による歪みを避ける
+    const QUIET=4;
+    const total=qr.getModuleCount()+QUIET*2;
+    const dpr=window.devicePixelRatio||1;
+    const availCss=Math.min(360,area.clientWidth||280);
+    const cellDev=Math.max(1,Math.floor(availCss*dpr/total));
+    const sizeCss=cellDev*total/dpr;
+    const svg=qr.createSvgTag({cellSize:1,margin:QUIET,scalable:true})
+      .replace('<svg ','<svg shape-rendering="crispEdges" width="'+sizeCss+'" height="'+sizeCss+'" ')
+      .replace('fill="white"','fill="#ffffff"').replace('fill="black"','fill="#000000"');
+    area.innerHTML=svg;
   }
-  document.getElementById('qr-modal').hidden=false;
 }
 
 function closeQr(){
