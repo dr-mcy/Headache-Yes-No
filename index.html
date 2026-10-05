@@ -71,7 +71,13 @@
   .actions .reset{background:#eee;color:#333}
   .actions .print{background:#4f9d6b;color:#fff}
   .actions .qr{background:#e8842a;color:#fff}
+  .actions .send{background:#2563a8;color:#fff}
+  .actions .send:disabled{background:#9db6d3;cursor:default}
   .actions .delete-all{background:#c0392b;color:#fff;margin-left:auto}
+  .send-status{margin:12px auto 0;max-width:560px;padding:10px 14px;border-radius:6px;font-size:14px;line-height:1.5;background:#eef3f8;color:#234}
+  .send-status[hidden]{display:none}
+  .send-status.ok{background:#e4f4ea;color:#1d6b3a;font-weight:bold}
+  .send-status.error{background:#fdeaea;color:#b00020}
   .footer-note{margin-top:18px;font-size:10px;color:#888;text-align:center;line-height:1.5}
   .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000}
   .modal[hidden]{display:none}
@@ -90,6 +96,7 @@
     body{background:#fff;padding:0}
     .container{box-shadow:none;padding:0;max-width:none}
     .actions{display:none}
+    .send-status{display:none !important}
     .options button{border:1px solid #999 !important}
     .modal{display:none !important}
   }
@@ -155,8 +162,11 @@
     <button class="reset" type="button" onclick="resetAll()">リセット</button>
     <button class="print" type="button" onclick="window.print()">印刷</button>
     <button class="qr" type="button" onclick="openQr()">QRコード</button>
+    <button class="send" type="button" id="send-btn" onclick="sendToClinic()" hidden>平岸脳神経へ送信</button>
     <button class="delete-all" type="button" onclick="deleteAllData()">全データ削除</button>
   </div>
+
+  <div class="send-status" id="send-status" role="status" hidden></div>
 
   <div class="footer-note">
     HIT-6™: 坂井 文彦ほか. 臨床医薬 2004; 20: 1045-1054を一部改変<br>
@@ -177,9 +187,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="hyn-crypto.js"></script>
 <script>
 // グラフビューア(Headache-Yes-No-chart)と同じバージョンで揃える。版の定義はここ1か所のみ。
-const APP_VERSION = 'v1.8.0';
+const APP_VERSION = 'v1.9.0';
 document.getElementById('app-version').textContent = APP_VERSION;
 
 const HIT6_Q = [
@@ -367,6 +378,84 @@ function openQr(){
   }
 }
 
+// ===== 平岸脳神経へ送信（端末内で暗号化 → このサイトの /api/submit へ。院内サーバーが後で取りに行く） =====
+// 入力内容は端末内で、院内の公開鍵(ECDH P-256)を使って暗号化してから送る。サーバーに平文は送らない。
+// 復号できるのは院内の秘密鍵だけ。公開鍵は院内サーバーで scripts/genkey.mjs を実行して作り、ここに貼る。
+// 未設定(null)の間は送信ボタンを出さない。
+// 受信側: https://github.com/dr-mcy/headache-inbox-relay
+const CLINIC_PUBLIC_KEY_JWK = null;
+const SEND_TIMEOUT_MS = 15000;
+const SEND_MSG_FAIL = '送信できませんでした。インターネット接続を確認して、もう一度押してください';
+let sending = false;
+
+// 動作確認用: localhost / 127.0.0.1 のときだけ ?clinicKey=<公開鍵JWKのbase64url> で差し替えられる。本番では無効。
+function clinicPublicKey(){
+  const h=location.hostname;
+  if(h==='localhost'||h==='127.0.0.1'){
+    try{
+      const k=new URLSearchParams(location.search).get('clinicKey');
+      if(k) return JSON.parse(atob(k.replace(/-/g,'+').replace(/_/g,'/')));
+    }catch(e){}
+  }
+  return CLINIC_PUBLIC_KEY_JWK;
+}
+
+function initSendButton(){
+  const ok=!!clinicPublicKey()&&typeof HynCrypto!=='undefined'&&!!(window.crypto&&crypto.subtle)&&/^https?:$/.test(location.protocol);
+  document.getElementById('send-btn').hidden=!ok;
+}
+
+function setSendStatus(msg,kind){
+  const el=document.getElementById('send-status');
+  el.textContent=msg||'';
+  el.className='send-status'+(kind?' '+kind:'');
+  el.hidden=!msg;
+}
+
+async function sendToClinic(){
+  if(sending) return;
+  const g=id=>(document.getElementById(id)||{value:''}).value||'';
+  const half=s=>s.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).trim();
+  const date=half(g('f-entry-date'));
+  if(!/^\d{1,4}\s*[\/\-／年.]\s*\d{1,2}\s*[\/\-／月.]\s*\d{1,2}\s*日?$/.test(date)){
+    setSendStatus('記入日を入力してください（例 2026/10/05）','error'); return;
+  }
+  if(!g('f-name').trim()){ setSendStatus('氏名を入力してください','error'); return; }
+  const key=clinicPublicKey();
+  const hDone=!hit6.some(s=>s===null), mDone=!mibs4.some(s=>s===null);
+  const summary=[
+    '氏名: '+g('f-name').trim(),
+    '記入日: '+date,
+    'HIT-6: '+(hDone?hit6Total()+'点（'+hit6Verdict(hit6Total())+'）':'未完'),
+    'MIBS-4: '+(mDone?mibs4Total()+'点（'+mibs4Verdict(mibs4Total())+'）':'未完')
+  ].join('\n');
+  if(!window.confirm('次の内容を平岸脳神経へ送信します。\n\n'+summary+'\n\nよろしいですか？')) return;
+  sending=true;
+  document.getElementById('send-btn').disabled=true;
+  setSendStatus('送信しています…','');
+  let timer=null;
+  try{
+    const env=await HynCrypto.encryptEnvelope(key,{text:buildQrText(),sentAt:new Date().toISOString()});
+    const ctl=new AbortController();
+    timer=setTimeout(()=>ctl.abort(),SEND_TIMEOUT_MS);
+    const res=await fetch('/api/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(env),signal:ctl.signal});
+    if(res.ok){
+      const b=await res.json();
+      setSendStatus('平岸脳神経へ送信しました'+(b&&b.id?'（受付番号 '+String(b.id).slice(0,8).toUpperCase()+'）':''),'ok');
+    }else if(res.status===429){
+      setSendStatus('送信回数が多すぎます。しばらくしてから、もう一度押してください','error');
+    }else{
+      setSendStatus(SEND_MSG_FAIL,'error');
+    }
+  }catch(e){
+    setSendStatus(SEND_MSG_FAIL,'error');
+  }finally{
+    clearTimeout(timer);
+    sending=false;
+    document.getElementById('send-btn').disabled=false;
+  }
+}
+
 function closeQr(){
   document.getElementById('qr-modal').hidden=true;
 }
@@ -375,7 +464,7 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){closeQr();}
 });
 
-render(); updateHit6(); updateMibs4(); setEntryDate();
+render(); updateHit6(); updateMibs4(); setEntryDate(); initSendButton();
 </script>
 </body>
 </html>
