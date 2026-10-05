@@ -71,7 +71,13 @@
   .actions .reset{background:#eee;color:#333}
   .actions .print{background:#4f9d6b;color:#fff}
   .actions .qr{background:#e8842a;color:#fff}
+  .actions .send{background:#2563a8;color:#fff}
+  .actions .send:disabled{background:#9db6d3;cursor:default}
   .actions .delete-all{background:#c0392b;color:#fff;margin-left:auto}
+  .send-status{margin:12px auto 0;max-width:560px;padding:10px 14px;border-radius:6px;font-size:14px;line-height:1.5;background:#eef3f8;color:#234}
+  .send-status[hidden]{display:none}
+  .send-status.ok{background:#e4f4ea;color:#1d6b3a;font-weight:bold}
+  .send-status.error{background:#fdeaea;color:#b00020}
   .footer-note{margin-top:18px;font-size:10px;color:#888;text-align:center;line-height:1.5}
   .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000}
   .modal[hidden]{display:none}
@@ -90,6 +96,7 @@
     body{background:#fff;padding:0}
     .container{box-shadow:none;padding:0;max-width:none}
     .actions{display:none}
+    .send-status{display:none !important}
     .options button{border:1px solid #999 !important}
     .modal{display:none !important}
   }
@@ -155,8 +162,11 @@
     <button class="reset" type="button" onclick="resetAll()">リセット</button>
     <button class="print" type="button" onclick="window.print()">印刷</button>
     <button class="qr" type="button" onclick="openQr()">QRコード</button>
+    <button class="send" type="button" id="send-btn" onclick="sendToClinic()">平岸脳神経へ送信</button>
     <button class="delete-all" type="button" onclick="deleteAllData()">全データ削除</button>
   </div>
+
+  <div class="send-status" id="send-status" role="status" hidden></div>
 
   <div class="footer-note">
     HIT-6™: 坂井 文彦ほか. 臨床医薬 2004; 20: 1045-1054を一部改変<br>
@@ -179,7 +189,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 // グラフビューア(Headache-Yes-No-chart)と同じバージョンで揃える。版の定義はここ1か所のみ。
-const APP_VERSION = 'v1.8.0';
+const APP_VERSION = 'v1.9.0';
 document.getElementById('app-version').textContent = APP_VERSION;
 
 const HIT6_Q = [
@@ -366,6 +376,88 @@ function openQr(){
     area.innerHTML=svg;
   }
 }
+
+// ===== 平岸脳神経へ送信（院内 Wi-Fi 経由。クラウドには送らない） =====
+// https のこのページから http の院内 server へ fetch すると mixed content で塞がれるため、
+// ポップアップ(受信ページ)を開いて postMessage で受け渡す。受信ページの origin だけを信用する。
+// 受信側: https://github.com/dr-mcy/headache-wifi-receiver
+const CLINIC_RECEIVER_ORIGIN = 'http://192.168.10.128:8894';
+const SEND_READY_TIMEOUT_MS = 8000;
+const SEND_MSG_NO_WIFI = '送信できませんでした。クリニックのWi-Fiに接続してから、もう一度押してください';
+const SEND_MSG_POPUP_BLOCKED = '送信用の画面を開けませんでした。ブラウザのポップアップを許可し、クリニックのWi-Fiに接続してから、もう一度押してください';
+let sendState=null; // {win, text, timer, poll, done}
+
+// 動作確認用: ローカル開発中(localhost / 127.0.0.1)のときだけ ?receiver=<origin> で差し替えられる。本番(vercel)では無効。
+function clinicReceiverOrigin(){
+  const h=location.hostname;
+  if(h==='localhost'||h==='127.0.0.1'){
+    try{
+      const o=new URL(new URLSearchParams(location.search).get('receiver')||'').origin;
+      if(/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o)) return o;
+    }catch(e){}
+  }
+  return CLINIC_RECEIVER_ORIGIN;
+}
+
+function setSendStatus(msg,kind){
+  const el=document.getElementById('send-status');
+  el.textContent=msg||'';
+  el.className='send-status'+(kind?' '+kind:'');
+  el.hidden=!msg;
+}
+
+function endSend(){
+  if(sendState){clearTimeout(sendState.timer);clearInterval(sendState.poll);}
+  document.getElementById('send-btn').disabled=false;
+}
+
+function sendToClinic(){
+  if(sendState&&!sendState.done) endSend();
+  const origin=clinicReceiverOrigin();
+  // click ハンドラ内で同期的に開く（ブロックされないため）。noopener にしない（opener が要る）
+  const win=window.open(origin+'/receive','hyn_receiver','popup,width=520,height=760');
+  if(!win){
+    sendState=null;
+    setSendStatus(SEND_MSG_POPUP_BLOCKED,'error');
+    return;
+  }
+  const st={win:win,origin:origin,text:buildQrText(),done:false,ready:false};
+  sendState=st;
+  document.getElementById('send-btn').disabled=true;
+  setSendStatus('クリニックの受付画面に接続しています…','');
+  st.timer=setTimeout(function(){
+    if(sendState!==st||st.ready) return;
+    endSend();
+    try{st.win.close();}catch(e){}
+    setSendStatus(SEND_MSG_NO_WIFI,'error');
+  },SEND_READY_TIMEOUT_MS);
+  // 受付画面が閉じられたまま完了していない場合
+  st.poll=setInterval(function(){
+    if(sendState!==st||st.done){clearInterval(st.poll);return;}
+    if(st.win.closed){
+      endSend();
+      setSendStatus(st.ready?'送信は完了していません。もう一度「平岸脳神経へ送信」を押してください':SEND_MSG_NO_WIFI,'error');
+    }
+  },500);
+}
+
+window.addEventListener('message',function(e){
+  const st=sendState;
+  if(!st||e.origin!==st.origin||e.source!==st.win) return;
+  const d=e.data;
+  if(!d||typeof d!=='object') return;
+  if(d.type==='hyn-ready'){
+    st.ready=true;
+    clearTimeout(st.timer);
+    // 受信ページの内容確認 → 「この内容で送信」は受信ページ側で行う
+    st.win.postMessage({type:'hyn-submit',text:st.text},st.origin);
+    setSendStatus('開いた画面で内容を確認し、「この内容で送信」を押してください','');
+  }else if(d.type==='hyn-done'){
+    st.done=true;
+    endSend();
+    setSendStatus('平岸脳神経へ送信しました','ok');
+  }
+});
 
 function closeQr(){
   document.getElementById('qr-modal').hidden=true;

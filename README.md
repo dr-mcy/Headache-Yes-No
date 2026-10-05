@@ -24,6 +24,15 @@
 - 本アプリはQRテキストの2行目に `バージョン: vX.Y.Z` を出力します。C は版が一致しないQRを登録しません。
 - 版の定義は `index.html` の `APP_VERSION` の1か所です（画面最下行の表示もここから埋めます）。
 
+## 院内 Wi-Fi から「平岸脳神経へ送信」（v1.9.0〜）
+
+自宅などで入力したあと、クリニックの Wi-Fi に接続して「平岸脳神経へ送信」を押すと、入力内容のテキスト（QRコードと同じ内容）が院内の受信 server に届き、FileMaker 取込用の CSV（グラフビューア C の「CSV契約 v1」）に追記されます。**クラウドには送りません。**
+
+- 受信側: [headache-wifi-receiver](https://github.com/dr-mcy/headache-wifi-receiver)（院内 server `http://192.168.10.128:8894`）。
+- 方式: このページは https、受信 server は http のため直接 `fetch` できません（mixed content）。ボタンで受信ページをポップアップで開き、`postMessage` で内容を受け渡します（受信ページの origin だけを信用、8 秒以内に応答が無ければ「Wi-Fi に接続してから…」を表示）。受信ページで内容を確認して「この内容で送信」を押すと送信されます。
+- 送信先の origin は `index.html` の `CLINIC_RECEIVER_ORIGIN` の 1 か所。ローカル確認時（`localhost` / `127.0.0.1`）だけ `?receiver=http://127.0.0.1:<port>` で差し替えられます。
+- QRコードのテキスト形式は変えていません。
+
 ## GitHub Pages で公開する
 
 リポジトリの **Settings → Pages** で `main` ブランチの `/ (root)` を公開元に設定すると、`https://dr-mcy.github.io/Headache-Yes-No/` で動作します。
