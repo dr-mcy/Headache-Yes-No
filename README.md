@@ -24,6 +24,21 @@
 - 本アプリはQRテキストの2行目に `バージョン: vX.Y.Z` を出力します。C は版が一致しないQRを登録しません。
 - 版の定義は `index.html` の `APP_VERSION` の1か所です（画面最下行の表示もここから埋めます）。
 
+## 「平岸脳神経へ送信」（v1.9.0〜。端末内で暗号化 → Vercel 経由 → 院内が取りに行く）
+
+自宅などで入力したあと「平岸脳神経へ送信」を押すと、内容を確認したうえで**端末内で暗号化**して、このサイトの `/api/submit` に送ります。院内の Mac（[headache-inbox-relay](https://github.com/dr-mcy/headache-inbox-relay)）が暗号文を取りに行き、秘密鍵で復号して FileMaker 取込用 CSV（グラフビューア C の「CSV契約 v1」）に追記します。**平文はサーバーに送りません。院内のネットワークに患者を入れる必要もありません。**
+
+- 暗号: 院内の ECDH P-256 公開鍵 + 使い捨て ECDH 鍵 → HKDF-SHA256 → AES-256-GCM（`hyn-crypto.js`、WebCrypto のみ）。送信内容は `{v:1, epk, iv, ct}`。QR のテキスト形式（`buildQrText`）は変えていません。
+- 公開鍵は `index.html` の `CLINIC_PUBLIC_KEY_JWK`。**`null` の間は送信ボタンを表示しません**。鍵の作成と設定手順は headache-inbox-relay の README を参照。
+- 送信前に記入日と氏名の入力を確認し、氏名・記入日・HIT-6・MIBS-4 を `confirm` で見せます。成功すると「平岸脳神経へ送信しました（受付番号 xxxx）」。
+- Vercel Functions（`api/`、依存なし）:
+  - `POST /api/submit` 暗号文を Upstash Redis に積む（16KB まで・スキーマ検証・IP ごと 30 回/時・14 日で自動消去・未取得 3000 件で打ち止め）
+  - `GET /api/pull` / `POST /api/ack` 院内用。`Authorization: Bearer <PULL_TOKEN>` 必須
+- Vercel の環境変数: Marketplace の Upstash Redis 連携が入れる `KV_REST_API_URL` / `KV_REST_API_TOKEN`（Upstash 直なら `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`）、自分で入れる `PULL_TOKEN`（任意で `RATE_LIMIT_PER_HOUR`）。未設定は 503。
+- ローカル確認（localhost / 127.0.0.1 のときだけ）: `?clinicKey=<公開鍵JWKのbase64url>` で鍵を差し替え。本番では無効。
+- テスト: `node --test test/*.test.mjs`（暗号の往復・改ざん検知・`api/*` の検証/レート制限/pull/ack。Redis は Upstash REST のモック）
+- 注意: 医療情報の外部保管（3 省 2 ガイドライン）と Vercel Hobby プランの利用条件（非商用）は運用前に要確認。詳細は headache-inbox-relay の README。
+
 ## GitHub Pages で公開する
 
 リポジトリの **Settings → Pages** で `main` ブランチの `/ (root)` を公開元に設定すると、`https://dr-mcy.github.io/Headache-Yes-No/` で動作します。
